@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>App Chat Backendless</title>
+<style>
+  body, html {
+    margin:0; padding:0; font-family: Arial, sans-serif; height: 100vh; background:#121212; color:#eee;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+  }
+  #login-register, #main-app { display:none; width:100%; max-width: 400px; margin: auto; }
+  input, button {
+    padding: 10px; margin: 6px 0; width: 100%; box-sizing: border-box;
+    border-radius: 4px; border: none;
+  }
+  button { cursor:pointer; background:#0b84f9; color:#fff; font-weight:bold; }
+  #main-app { display:flex; flex-direction: column; height: 100vh; max-width: 600px; position: relative; }
+  .tabs {
+    display:flex; justify-content: space-around; position: fixed; bottom: 0; left:0; right:0;
+    background:#222; padding:10px 0; border-top: 1px solid #333; max-width: 600px; margin: 0 auto;
+  }
+  .tab-button {
+    color:#eee; font-size: 24px; cursor:pointer; user-select:none;
+  }
+  .tab-button.active {
+    color:#0b84f9; font-weight: bold;
+  }
+  #user-list, #chat-container {
+    flex:1; overflow-y: auto; padding: 10px; margin-bottom: 60px; background:#181818; border-radius:8px;
+  }
+  .user-item {
+    display:flex; align-items:center; justify-content: space-between; padding: 8px;
+    border-bottom: 1px solid #333;
+  }
+  .user-item .left {
+    display:flex; align-items:center;
+    gap: 10px;
+  }
+  .user-active-indicator {
+    width: 12px; height: 12px; border-radius: 50%; background: green;
+  }
+  .user-inactive-indicator {
+    width: 12px; height: 12px; border-radius: 50%; background: gray;
+  }
+  .options-btn {
+    background: transparent; border:none; color:#ccc; cursor:pointer; font-weight:bold; font-size: 18px;
+  }
+  #chat-messages {
+    height: 70vh; overflow-y: auto; background:#121212; padding:10px; border-radius: 6px;
+    display:flex; flex-direction: column;
+    gap: 6px;
+  }
+  .message {
+    max-width: 70%; padding: 8px 12px; border-radius: 20px; font-size: 14px; line-height: 1.3em;
+  }
+  .message.self {
+    background:#0b84f9; align-self: flex-end; color:#fff;
+  }
+  .message.other {
+    background:#333; align-self: flex-start; color:#eee;
+  }
+  #chat-input-container {
+    display:flex; margin-top: 10px;
+  }
+  #chat-input {
+    flex:1; border-radius: 20px; border:none; padding: 10px 15px; font-size: 14px;
+  }
+  #send-msg-btn {
+    background:#0b84f9; border:none; color:#fff; padding: 0 15px; border-radius: 20px;
+    margin-left: 8px; cursor:pointer;
+  }
+  #approval-message {
+    background: #4a90e2; color: white; padding: 10px; margin: 10px 0; border-radius: 8px;
+  }
+  .hidden { display:none !important; }
+
+  /* Botón admin solicitudes */
+  #open-requests-btn {
+    display:none; position: fixed; top: 15px; left: 50%; transform: translateX(-50%);
+    background:#0b84f9; color:#fff; border:none; padding:10px 20px; border-radius: 8px; cursor:pointer; z-index: 999;
+  }
+
+  /* Panel solicitudes admin */
+  #admin-requests-panel {
+    display:none; position: fixed; top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.85); color:#eee; z-index:9999; padding: 20px; overflow-y:auto;
+  }
+  #admin-requests-panel h2 {
+    margin-top: 0;
+  }
+  #close-requests-panel {
+    position: absolute; top: 15px; right: 20px;
+    font-size: 20px; background:#f33; color:#fff; border:none; padding: 5px 12px;
+    border-radius:5px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div id="login-register">
+  <h2>Iniciar Sesión / Registrarse</h2>
+
+  <div id="login-form">
+    <input type="email" id="login-email" placeholder="Correo Gmail" />
+    <input type="password" id="login-password" placeholder="Contraseña" />
+    <button id="login-btn">Iniciar Sesión</button>
+    <p>¿No tienes cuenta? <a href="#" id="show-register">Regístrate</a></p>
+  </div>
+
+  <div id="register-form" class="hidden">
+    <input type="text" id="register-name" placeholder="Nombre completo" />
+    <input type="email" id="register-email" placeholder="Correo Gmail" />
+    <input type="password" id="register-password" placeholder="Contraseña" />
+    <button id="register-btn">Registrarse</button>
+    <p>¿Ya tienes cuenta? <a href="#" id="show-login">Iniciar sesión</a></p>
+  </div>
+
+  <div id="approval-message" class="hidden">
+    Tu registro está pendiente de aprobación por los administradores. Recibirás un correo cuando seas aprobado.
+  </div>
+</div>
+
+<div id="main-app">
+  <!-- Botón admin solicitudes -->
+  <button id="open-requests-btn" title="Ver solicitudes pendientes">Solicitudes Pendientes</button>
+
+  <div id="user-list"></div>
+  <div id="chat-container" class="hidden">
+    <div id="chat-messages"></div>
+    <div id="chat-input-container">
+      <input type="text" id="chat-input" placeholder="Escribe un mensaje..." />
+      <button id="send-msg-btn">Enviar</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab-button active" id="tab-list" title="Lista usuarios">📋</div>
+    <div class="tab-button" id="tab-chat" title="Chat">💬</div>
+  </div>
+</div>
+
+<!-- Panel modal solicitudes admin -->
+<div id="admin-requests-panel">
+  <h2>Solicitudes pendientes</h2>
+  <button id="close-requests-panel">Cerrar</button>
+  <div id="requests-list" style="margin-top: 50px;"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/backendless"></script>
+<script>
+  // Configuración Backendless
+  const APP_ID = '13C8D8A1-30F5-4BB3-8BAC-8C4BEE472D93';
+  const JS_API_KEY = '30D2714D-38E4-4C3B-87F4-464446EE06DC';
+  Backendless.initApp(APP_ID, JS_API_KEY);
+
+  // Variables globales
+  let currentUser = null;
+  let currentChatId = 'general';
+  let chatParticipants = [];
+  let isAdmin = false;
+
+  // DOM
+  const loginRegisterDiv = document.getElementById('login-register');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const approvalMessage = document.getElementById('approval-message');
+  const mainApp = document.getElementById('main-app');
+
+  const loginEmailInput = document.getElementById('login-email');
+  const loginPasswordInput = document.getElementById('login-password');
+  const loginBtn = document.getElementById('login-btn');
+
+  const registerNameInput = document.getElementById('register-name');
+  const registerEmailInput = document.getElementById('register-email');
+  const registerPasswordInput = document.getElementById('register-password');
+  const registerBtn = document.getElementById('register-btn');
+
+  const showRegisterLink = document.getElementById('show-register');
+  const showLoginLink = document.getElementById('show-login');
+
+  const tabListBtn = document.getElementById('tab-list');
+  const tabChatBtn = document.getElementById('tab-chat');
+
+  const userListDiv = document.getElementById('user-list');
+  const chatContainer = document.getElementById('chat-container');
+  const chatMessagesDiv = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+  const sendMsgBtn = document.getElementById('send-msg-btn');
+
+  // Admin panel DOM
+  const adminRequestsPanel = document.getElementById('admin-requests-panel');
+  const openRequestsBtn = document.getElementById('open-requests-btn');
+  const closeRequestsBtn = document.getElementById('close-requests-panel');
+  const requestsListDiv = document.getElementById('requests-list');
+
+  // Mostrar login/register toggles
+  showRegisterLink.onclick = e => {
+    e.preventDefault();
+    loginForm.classList.add('hidden');
+    approvalMessage.classList.add('hidden');
+    registerForm.classList.remove('hidden');
+  };
+  showLoginLink.onclick = e => {
+    e.preventDefault();
+    registerForm.classList.add('hidden');
+    approvalMessage.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+  };
+
+  // Registro usuario con llamada Cloud Code para email admins
+  registerBtn.onclick = async () => {
+    const name = registerNameInput.value.trim();
+    const email = registerEmailInput.value.trim().toLowerCase();
+    const password = registerPasswordInput.value;
+
+    if (!name || !email || !password) {
+      alert('Por favor rellena todos los campos');
+      return;
+    }
+    if (!email.endsWith('@gmail.com')) {
+      alert('Solo se permiten cuentas Gmail');
+      return;
+    }
+    try {
+      const user = new Backendless.User();
+      user.email = email;
+      user.password = password;
+      user.name = name;
+      user.approved = false;
+      user.isAdmin = (email === 'julio');
+
+      await Backendless.UserService.register(user);
+
+      // Llamar función Cloud Code para notificar admins (debes tenerla creada en Backendless)
+      await Backendless.CustomServices.invoke('sendAdminNotification', { name, email });
+
+      alert('Registro exitoso, espera a que un administrador apruebe tu cuenta. Se enviará un correo.');
+      registerForm.classList.add('hidden');
+      approvalMessage.classList.remove('hidden');
+    } catch (err) {
+      alert('Error al registrar: ' + err.message);
+    }
+  };
+
+  // Login usuario
+  loginBtn.onclick = async () => {
+    const email = loginEmailInput.value.trim().toLowerCase();
+    const password = loginPasswordInput.value;
+
+    if (!email || !password) {
+      alert('Rellena todos los campos');
+      return;
+    }
+
+    try {
+      const user = await Backendless.UserService.login(email, password, true);
+      const userObj = await Backendless.Data.of('Users').findById(user.objectId);
+
+      if (!userObj.approved) {
+        await Backendless.UserService.logout();
+        approvalMessage.classList.remove('hidden');
+        loginRegisterDiv.style.display = 'block';
+        mainApp.style.display = 'none';
+        return;
+      }
+
+      currentUser = userObj;
+      isAdmin = currentUser.isAdmin === true;
+
+      loginRegisterDiv.style.display = 'none';
+      mainApp.style.display = 'flex';
+
+      await updateUserLastActive();
+      initApp();
+
+    } catch (err) {
+      alert('Error al iniciar sesión: ' + err.message);
+    }
+  };
+
+  // Actualizar lastActive para presencia
+  async function updateUserLastActive() {
+    if (!currentUser) return;
+    try {
+      currentUser.lastActive = new Date();
+      await Backendless.Data.of('Users').save(currentUser);
+    } catch (e) {
+      console.error('Error actualizando lastActive', e);
+    }
+  }
+
+  // Periodicamente actualizar presencia y lista usuarios
+  function startPresenceUpdater() {
+    setInterval(async () => {
+      if (!currentUser) return;
+      await updateUserLastActive();
+      loadUserList();
+    }, 30000);
+  }
+
+  // Cargar lista usuarios aprobados
+  async function loadUserList() {
+    try {
+      const queryBuilder = Backendless.DataQueryBuilder.create().setSortBy(['name']);
+      const users = await Backendless.Data.of('Users').find(queryBuilder);
+      const approvedUsers = users.filter(u => u.approved);
+
+      userListDiv.innerHTML = '';
+      approvedUsers.forEach(u => {
+        const userDiv = document.createElement('div');
+        userDiv.className = 'user-item';
+
+        // Estado activo si lastActive hace menos de 1 minuto
+        const isActive = u.lastActive && ((new Date() - new Date(u.lastActive)) < 60000);
+
+        const leftDiv = document.createElement('div');
+        leftDiv.className = 'left';
+        const statusCircle = document.createElement('div');
+        statusCircle.className = isActive ? 'user-active-indicator' : 'user-inactive-indicator';
+        leftDiv.appendChild(statusCircle);
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = u.name || u.email;
+        leftDiv.appendChild(nameSpan);
+
+        userDiv.appendChild(leftDiv);
+
+        const optionsBtn = document.createElement('button');
+        optionsBtn.textContent = '⋮';
+        optionsBtn.className = 'options-btn';
+        optionsBtn.onclick = () => showUserOptions(u);
+        userDiv.appendChild(optionsBtn);
+
+        userListDiv.appendChild(userDiv);
+      });
+    } catch (e) {
+      console.error('Error cargando usuarios', e);
+    }
+  }
+
+  // Mostrar opciones minimenu usuario
+  function showUserOptions(user) {
+    if (user.email === currentUser.email) {
+      alert('No puedes hacer acciones contigo mismo.');
+      return;
+    }
+    let options = `Opciones para ${user.name || user.email}:\n1. Chatear\n2. Llamar (simulado)`;
+    if (isAdmin) {
+      options += `\n3. VETAR usuario\n4. Convertir a ADMIN`;
+    }
+    const option = prompt(options + '\n\nEscribe el número');
+    if (option === '1') {
+      openPrivateChat(user);
+    } else if (option === '2') {
+      alert('Función de llamada aún no implementada.');
+    } else if (option === '3' && isAdmin) {
+      vetoUser(user);
+    } else if (option === '4' && isAdmin) {
+      makeUserAdmin(user);
+    }
+  }
+
+  // Vetar usuario (desaprobar)
+  async function vetoUser(user) {
+    if (!confirm(`¿Seguro que quieres vetar (desaprobar) al usuario ${user.name || user.email}?`)) return;
+    try {
+      user.approved = false;
+      await Backendless.Data.of('Users').save(user);
+      alert('Usuario vetado correctamente.');
+      loadUserList();
+    } catch (e) {
+      alert('Error vetando usuario: ' + e.message);
+    }
+  }
+
+  // Convertir usuario en admin
+  async function makeUserAdmin(user) {
+    if (!confirm(`¿Convertir a ${user.name || user.email} en admin?`)) return;
+    try {
+      user.isAdmin = true;
+      user.approved = true;
+      await Backendless.Data.of('Users').save(user);
+      alert('Usuario convertido en admin.');
+      loadUserList();
+    } catch (e) {
+      alert('Error haciendo admin: ' + e.message);
+    }
+  }
+
+  // Tabs para cambiar entre lista y chat
+  tabListBtn.onclick = () => {
+    tabListBtn.classList.add('active');
+    tabChatBtn.classList.remove('active');
+    userListDiv.style.display = 'block';
+    chatContainer.classList.add('hidden');
+  };
+  tabChatBtn.onclick = () => {
+    tabChatBtn.classList.add('active');
+    tabListBtn.classList.remove('active');
+    userListDiv.style.display = 'none';
+    chatContainer.classList.remove('hidden');
+    openChat('general');
+  };
+
+  // Abrir chat, cargar mensajes
+  let messagesSubscription = null;
+  async function openChat(chatId) {
+    currentChatId = chatId;
+    chatMessagesDiv.innerHTML = '';
+    if (messagesSubscription) {
+      messagesSubscription.cancel();
+      messagesSubscription = null;
+    }
+    // Cargar mensajes previos
+    const queryBuilder = Backendless.DataQueryBuilder.create()
+      .setWhereClause(`chatId = '${chatId}'`)
+      .setSortBy(['timestamp']);
+    const messages = await Backendless.Data.of('Messages').find(queryBuilder);
+    messages.forEach(addMessageToChat);
+    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+
+    // Suscribir a nuevos mensajes en tiempo real
+    const dataStore = Backendless.Data.of('Messages');
+    messagesSubscription = dataStore.rt().addCreateListener(`chatId = '${chatId}'`, message => {
+      if (message.sender !== currentUser.email) {
+        addMessageToChat(message);
+        chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+      }
+    });
+  }
+
+  // Añadir mensaje a chat
+  function addMessageToChat(message) {
+    const div = document.createElement('div');
+    div.className = 'message ' + (message.sender === currentUser.email ? 'self' : 'other');
+    const time = new Date(message.timestamp).toLocaleTimeString();
+    div.innerHTML = `<strong>${escapeHtml(message.sender)}</strong>: ${escapeHtml(message.content)}<br><small>${time}</small>`;
+    chatMessagesDiv.appendChild(div);
+  }
+
+  // Enviar mensaje chat
+  sendMsgBtn.onclick = async () => {
+    const content = chatInput.value.trim();
+    if (!content) return;
+    const msg = {
+      chatId: currentChatId,
+      sender: currentUser.email,
+      content,
+      timestamp: new Date()
+    };
+    try {
+      await Backendless.Data.of('Messages').save(msg);
+      chatInput.value = '';
+    } catch (e) {
+      alert('Error enviando mensaje: ' + e.message);
+    }
+  };
+
+  // Escapar html para evitar XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Abrir chat privado con usuario (chatId es combinación ordenada emails)
+  async function openPrivateChat(user) {
+    let emails = [currentUser.email, user.email].sort();
+    let chatId = emails.join('_');
+    openChat(chatId);
+  }
+
+  // Panel solicitudes admin
+  openRequestsBtn.onclick = () => {
+    loadPendingRequests();
+    adminRequestsPanel.style.display = 'block';
+  };
+  closeRequestsBtn.onclick = () => {
+    adminRequestsPanel.style.display = 'none';
+  };
+
+  async function loadPendingRequests() {
+    try {
+      const queryBuilder = Backendless.DataQueryBuilder.create()
+        .setWhereClause('approved = false')
+        .setSortBy(['created']);
+      const pendingUsers = await Backendless.Data.of('Users').find(queryBuilder);
+
+      requestsListDiv.innerHTML = '';
+      if (pendingUsers.length === 0) {
+        requestsListDiv.innerHTML = '<em>No hay solicitudes pendientes.</em>';
+        return;
+      }
+
+      pendingUsers.forEach(user => {
+        const div = document.createElement('div');
+        div.style = 'display:flex; justify-content: space-between; align-items:center; padding: 10px; border-bottom: 1px solid #444;';
+
+        const info = document.createElement('span');
+        info.textContent = `${user.name || user.email} (${user.email})`;
+
+        const buttonsDiv = document.createElement('div');
+
+        // Botón aprobar
+        const approveBtn = document.createElement('button');
+        approveBtn.textContent = 'Aceptar';
+        approveBtn.style = 'margin-right: 8px; background: green; color: white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;';
+        approveBtn.onclick = async () => {
+          try {
+            user.approved = true;
+            await Backendless.Data.of('Users').save(user);
+            alert(`Usuario ${user.name || user.email} aprobado.`);
+            loadPendingRequests();
+            loadUserList();
+          } catch (e) {
+            alert('Error aprobando usuario: ' + e.message);
+          }
+        };
+
+        // Botón denegar
+        const denyBtn = document.createElement('button');
+        denyBtn.textContent = 'Denegar';
+        denyBtn.style = 'background: red; color: white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;';
+        denyBtn.onclick = async () => {
+          if (!confirm(`¿Seguro que quieres eliminar la solicitud de ${user.name || user.email}?`)) return;
+          try {
+            await Backendless.Data.of('Users').remove(user);
+            alert(`Solicitud de ${user.name || user.email} eliminada.`);
+            loadPendingRequests();
+          } catch (e) {
+            alert('Error eliminando solicitud: ' + e.message);
+          }
+        };
+
+        buttonsDiv.appendChild(approveBtn);
+        buttonsDiv.appendChild(denyBtn);
+
+        div.appendChild(info);
+        div.appendChild(buttonsDiv);
+        requestsListDiv.appendChild(div);
+      });
+    } catch (e) {
+      console.error('Error cargando solicitudes:', e);
+    }
+  }
+
+  // Mostrar botón admin tras login
+  function checkShowAdminPanelBtn() {
+    if (isAdmin) {
+      openRequestsBtn.style.display = 'block';
+    } else {
+      openRequestsBtn.style.display = 'none';
+    }
+  }
+
+  // Inicializar app principal
+  async function initApp() {
+    await loadUserList();
+    startPresenceUpdater();
+    checkShowAdminPanelBtn();
+    tabListBtn.click(); // Mostrar lista usuarios
+  }
+
+  // Auto-login si token guardado
+  (async () => {
+    try {
+      const user = await Backendless.UserService.getCurrentUser();
+      if (user) {
+        const userObj = await Backendless.Data.of('Users').findById(user.objectId);
+        if (userObj && userObj.approved) {
+          currentUser = userObj;
+          isAdmin = currentUser.isAdmin === true;
+          loginRegisterDiv.style.display = 'none';
+          mainApp.style.display = 'flex';
+          await updateUserLastActive();
+          initApp();
+          return;
+        } else {
+          await Backendless.UserService.logout();
+        }
+      }
+      loginRegisterDiv.style.display = 'block';
+      mainApp.style.display = 'none';
+    } catch (e) {
+      console.error('Auto-login error', e);
+      loginRegisterDiv.style.display = 'block';
+      mainApp.style.display = 'none';
+    }
+  })();
+
+</script>
+
+</body>
+</html>
