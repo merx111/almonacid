@@ -416,7 +416,11 @@
         .setSortBy(['name']);
       const users = await Backendless.Data.of('Users').find(query);
 
-      userListDiv.innerHTML = '';
+      userListDiv.innerHTML = `
+  <div style="text-align:center; font-size:1.2em; font-weight:bold; margin-bottom:16px;">
+    Bienvenido a la Peña de Almonacid, Aupa almonacid
+  </div>
+`;
       users.forEach(u => {
         const userDiv = document.createElement('div');
         userDiv.className = 'user-item';
