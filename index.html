@@ -153,6 +153,7 @@
       background: #0a6dd0;
     }
     #login-register {
+      background: url('https://www.fotopaises.com/Fotos-Paises/t/2007/5/28/2147_1180426595.jpg') center center / cover no-repeat;
       padding: 30px 15px;
       display: flex;
       flex-direction: column;
@@ -668,8 +669,15 @@
         if (userObjArr.length && userObjArr[0].approved) {
           currentUser = userObjArr[0];
           isAdmin = currentUser.isAdmin === true;
-          loginRegisterDiv.style.display = 'none';
-          mainApp.style.display = 'flex';
+          loginRegisterDiv.style.opacity = '1';
+          loginRegisterDiv.style.transition = 'opacity 0.8s';
+
+          // Inicia el fade out
+          loginRegisterDiv.style.opacity = '0';
+          setTimeout(() => {
+            loginRegisterDiv.style.display = 'none';
+            mainApp.style.display = 'flex';
+          }, 800); // 800ms = duración del fade
           await updateUserLastActive();
           initApp();
           return;
