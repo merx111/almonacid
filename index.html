@@ -1,347 +1,226 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<title>App Chat Backendless - Móvil</title>
-<style>
-  /* Reset básico */
-  * {
-    box-sizing: border-box;
-  }
-  body, html {
-    margin:0; padding:0; height:100%;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background:#121212; color:#eee;
-    display: flex;
-    flex-direction: column;
-  }
-  #login-register, #main-app {
-    max-width: 480px;
-    margin: auto;
-    width: 100%;
-    flex-grow: 1;
-    display: none;
-    flex-direction: column;
-  }
-  input, button {
-    font-size: 1rem;
-    border-radius: 8px;
-    border: none;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-    width: 100%;
-  }
-  button {
-    cursor: pointer;
-    background: #0b84f9;
-    color: white;
-    font-weight: 600;
-    transition: background 0.25s ease;
-  }
-  button:hover {
-    background: #0a6dd0;
-  }
-  /* Login/Register */
-  #login-register {
-    padding: 30px 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100vh;
-  }
-  #login-register h2 {
-    margin-bottom: 20px;
-    font-weight: 700;
-    text-align: center;
-  }
-  #login-register p {
-    text-align: center;
-    font-size: 0.9rem;
-    margin-top: 0;
-  }
-  #login-register a {
-    color: #0b84f9;
-    text-decoration: none;
-    font-weight: 600;
-  }
-  #login-register a:hover {
-    text-decoration: underline;
-  }
-  #approval-message {
-    background: #2874a6;
-    padding: 12px;
-    border-radius: 10px;
-    margin-bottom: 15px;
-    text-align: center;
-  }
-  .hidden { display: none !important; }
-
-  /* Main app layout */
-  #main-app {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-  #user-list, #chat-container {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 10px 15px;
-    background: #181818;
-    border-radius: 12px 12px 0 0;
-    margin-bottom: 60px; /* espacio para barra de tabs */
-  }
-
-  /* Lista usuarios */
-  .user-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 15px;
-    margin-bottom: 8px;
-    border-radius: 12px;
-    background: #222;
-    border: 2px solid #444;
-    transition: border-color 0.3s ease;
-  }
-  .user-item:hover {
-    border-color: #0b84f9;
-    cursor: pointer;
-  }
-  .user-item .left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .user-active-indicator, .user-inactive-indicator {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .user-active-indicator {
-    background: #38d13e;
-    box-shadow: 0 0 8px #38d13eaa;
-  }
-  .user-inactive-indicator {
-    background: #888;
-  }
-  .options-btn {
-    background: transparent;
-    border: none;
-    color: #bbb;
-    font-weight: 700;
-    font-size: 22px;
-    padding: 0 8px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .options-btn:hover {
-    color: #0b84f9;
-  }
-
-  /* Chat */
-  #chat-messages {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    height: 70vh;
-    overflow-y: auto;
-    padding-right: 5px;
-  }
-  .message {
-    max-width: 80%;
-    padding: 10px 14px;
-    border-radius: 20px;
-    font-size: 14px;
-    line-height: 1.4;
-    word-break: break-word;
-  }
-  .message.self {
-    background: #0b84f9;
-    color: white;
-    align-self: flex-end;
-    box-shadow: 0 0 8px #0b84f9aa;
-  }
-  .message.other {
-    background: #333;
-    color: #eee;
-    align-self: flex-start;
-  }
-
-  /* Chat input container vertical */
-  #chat-input-container {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 10px 0 0 0;
-  }
-  #chat-input {
-    border-radius: 14px;
-    font-size: 18px;
-    padding: 16px 20px;
-    background: #222;
-    color: #eee;
-    border: 2px solid #444;
-    resize: none;
-    min-height: 60px;
-  }
-  #chat-input:focus {
-    outline: none;
-    border-color: #0b84f9;
-  }
-  #send-msg-btn {
-    background: #0b84f9;
-    padding: 8px 0;
-    border-radius: 14px;
-    font-size: 14px;
-    font-weight: 700;
-    color: white;
-    user-select: none;
-    transition: background 0.3s ease;
-    width: 90px;
-    align-self: center;
-  }
-  #send-msg-btn:hover {
-    background: #0a6dd0;
-  }
-
-  /* Barra inferior con tabs */
-  .tabs {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: #222;
-    display: flex;
-    justify-content: space-around;
-    padding: 12px 0;
-    border-top: 2px solid #444;
-    box-shadow: 0 -2px 6px #0008;
-    z-index: 100;
-    user-select: none;
-  }
-  .tab-button {
-    flex-grow: 1;
-    text-align: center;
-    font-size: 28px;
-    color: #777;
-    cursor: pointer;
-    transition: color 0.3s ease;
-    line-height: 1;
-  }
-  .tab-button.active, .tab-button:hover {
-    color: #0b84f9;
-  }
-
-  /* Botón solicitudes pendiente para admin a la derecha */
-  #open-requests-btn {
-    font-size: 26px;
-    line-height: 1;
-    padding: 8px 10px;
-    background: transparent;
-    color: #777;
-    border: none;
-    cursor: pointer;
-    transition: color 0.3s ease;
-  }
-  #open-requests-btn.active, #open-requests-btn:hover {
-    color: #0b84f9;
-  }
-
-  /* Panel solicitudes admin */
-  #admin-requests-panel {
-    display:none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(18, 18, 18, 0.95);
-    color: #eee;
-    z-index: 1000;
-    padding: 20px;
-    overflow-y: auto;
-    font-size: 1rem;
-  }
-  #admin-requests-panel h2 {
-    margin-top: 0;
-    font-weight: 700;
-  }
-  #close-requests-panel {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    font-size: 20px;
-    background: #f33;
-    color: #fff;
-    border: none;
-    padding: 5px 14px;
-    border-radius: 10px;
-    cursor: pointer;
-  }
-  #requests-list div {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 15px;
-    border-bottom: 1px solid #444;
-  }
-  #requests-list div button {
-    margin-left: 10px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-weight: 600;
-    color: #fff;
-    transition: background 0.3s ease;
-  }
-  #requests-list div button.accept {
-    background: #38d13e;
-  }
-  #requests-list div button.accept:hover {
-    background: #2aa62e;
-  }
-  #requests-list div button.deny {
-    background: #d13e3e;
-  }
-  #requests-list div button.deny:hover {
-    background: #a42e2e;
-  }
-
-  /* Responsive mobile */
-  @media (max-width: 500px) {
-    #chat-messages {
-      height: 65vh;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>App Chat Backendless - Móvil</title>
+  <style>
+    body, html {
+      margin:0; padding:0; height:100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background:#121212; color:#eee;
     }
-    #chat-input {
-      font-size: 16px;
-      min-height: 50px;
-      padding: 14px 16px;
+    /* Botones fixed solo icono */
+    .tabs {
+      position: fixed;
+      bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      background: #222;
+      display: flex; justify-content: space-around;
+      padding: 12px 0;
+      border-top: 2px solid #444;
+      box-shadow: 0 -2px 6px #0008;
+      z-index: 100;
+      user-select: none;
     }
-    #send-msg-btn {
-      width: 70px;
-      font-size: 12px;
-      padding: 6px 0;
+    .tab-button {
+      flex-grow: 1;
+      text-align: center;
+      font-size: 28px;
+      color: #777;
+      cursor: pointer;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0;
+      transition: color 0.3s;
+      line-height: 1;
     }
+    .tab-button.active, .tab-button:hover {
+      color: #0b84f9;
+      background: transparent !important;
+    }
+    /* Botón de solicitudes admin */
+    #open-requests-btn {
+      font-size: 26px;
+      line-height: 1;
+      padding: 8px 10px;
+      background: transparent;
+      color: #777;
+      border: none;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+    #open-requests-btn.active, #open-requests-btn:hover {
+      color: #0b84f9;
+    }
+    /* Lista usuarios, 3 puntos a la derecha */
     .user-item {
-      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 15px;
+      margin-bottom: 8px;
+      border-radius: 12px;
+      background: #222;
+      border: 2px solid #444;
+      transition: border-color 0.3s;
+      position: relative;
     }
-  }
-</style>
+    .user-item:hover { border-color: #0b84f9; cursor: pointer; }
+    .user-item .left { display: flex; align-items: center; gap: 14px; }
+    .user-active-indicator, .user-inactive-indicator {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+    }
+    .user-active-indicator { background: #38d13e; box-shadow: 0 0 8px #38d13eaa; }
+    .user-inactive-indicator { background: #888; }
+    .options-btn {
+      margin-left: auto;
+      background: transparent !important;
+      border: none !important;
+      color: #bbb;
+      font-size: 22px;
+      padding: 0 8px 0 0;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .options-btn:hover { color: #0b84f9; }
+
+    /* Chat */
+    #chat-messages { display: flex; flex-direction: column; gap: 8px; height: 70vh; overflow-y: auto; padding-right: 5px; }
+    .message { max-width: 80%; padding: 10px 14px; border-radius: 20px; font-size: 14px; line-height: 1.4; word-break: break-word; }
+    .message.self { background: #0b84f9; color: white; align-self: flex-end; box-shadow: 0 0 8px #0b84f9aa; }
+    .message.other { background: #333; color: #eee; align-self: flex-start; }
+    #chat-input-container { display: flex; flex-direction: column; gap: 6px; padding: 10px 0 0 0; }
+    #chat-input { border-radius: 14px; font-size: 18px; padding: 16px 20px; background: #222; color: #eee; border: 2px solid #444; resize: none; min-height: 60px; }
+    #chat-input:focus { outline: none; border-color: #0b84f9; }
+    #send-msg-btn { background: #0b84f9; padding: 8px 0; border-radius: 14px; font-size: 14px; font-weight: 700; color: white; user-select: none; transition: background 0.3s; width: 90px; align-self: center; }
+    #send-msg-btn:hover { background: #0a6dd0; }
+
+    /* Panel solicitudes admin */
+    #admin-requests-panel {
+      display:none;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(18, 18, 18, 0.95);
+      color: #eee; z-index: 1000; padding: 20px; overflow-y: auto; font-size: 1rem;
+    }
+    #admin-requests-panel h2 { margin-top: 0; font-weight: 700; }
+    #close-requests-panel {
+      position: absolute; top: 20px; right: 20px;
+      font-size: 20px; background: #f33; color: #fff;
+      border: none; padding: 5px 14px; border-radius: 10px; cursor: pointer;
+    }
+    #requests-list div {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 15px; border-bottom: 1px solid #444;
+    }
+    #requests-list div button {
+      margin-left: 10px; padding: 6px 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; color: #fff; transition: background 0.3s;
+    }
+    #requests-list div button.accept { background: #38d13e; }
+    #requests-list div button.accept:hover { background: #2aa62e; }
+    #requests-list div button.deny { background: #d13e3e; }
+    #requests-list div button.deny:hover { background: #a42e2e; }
+
+    /* Login/Register */
+    #login-register, #main-app {
+      max-width: 480px;
+      margin: auto;
+      width: 100%;
+      flex-grow: 1;
+      display: none;
+      flex-direction: column;
+    }
+    input, button {
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+    button {
+      cursor: pointer;
+      background: #0b84f9;
+      color: white;
+      font-weight: 600;
+      transition: background 0.25s ease;
+    }
+    button:hover {
+      background: #0a6dd0;
+    }
+    #login-register {
+      padding: 30px 15px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100vh;
+    }
+    #login-register h2 {
+      margin-bottom: 20px;
+      font-weight: 700;
+      text-align: center;
+    }
+    #login-register p {
+      text-align: center;
+      font-size: 0.9rem;
+      margin-top: 0;
+    }
+    #login-register a {
+      color: #0b84f9;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    #login-register a:hover {
+      text-decoration: underline;
+    }
+    #approval-message {
+      background: #2874a6;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .hidden { display: none !important; }
+
+    /* Main app layout */
+    #main-app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #user-list, #chat-container {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 10px 15px;
+      background: #181818;
+      border-radius: 12px 12px 0 0;
+      margin-bottom: 60px; /* espacio para barra de tabs */
+    }
+
+    /* Responsive mobile */
+    @media (max-width: 500px) {
+      #chat-messages { height: 65vh; }
+      #chat-input { font-size: 16px; min-height: 50px; padding: 14px 16px; }
+      #send-msg-btn { width: 70px; font-size: 12px; padding: 6px 0; }
+      .user-item { padding: 10px 12px; }
+    }
+  </style>
 </head>
 <body>
 
+<!-- Login/Register -->
 <div id="login-register">
   <h2>Iniciar Sesión / Registrarse</h2>
-
   <div id="login-form">
     <input type="email" id="login-email" placeholder="Correo Gmail" autocomplete="username" />
     <input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password" />
     <button id="login-btn">Iniciar Sesión</button>
     <p>¿No tienes cuenta? <a href="#" id="show-register">Regístrate</a></p>
   </div>
-
   <div id="register-form" class="hidden">
     <input type="text" id="register-name" placeholder="Nombre completo" autocomplete="name" />
     <input type="email" id="register-email" placeholder="Correo Gmail" autocomplete="email" />
@@ -349,20 +228,18 @@
     <button id="register-btn">Registrarse</button>
     <p>¿Ya tienes cuenta? <a href="#" id="show-login">Iniciar sesión</a></p>
   </div>
-
   <div id="approval-message" class="hidden" role="alert">
     Tu registro está pendiente de aprobación por los administradores. Recibirás un correo cuando seas aprobado.
   </div>
 </div>
 
+<!-- Main App -->
 <div id="main-app">
-  <!-- Barra inferior con tabs y botón solicitudes admin -->
   <div class="tabs" role="tablist" aria-label="Navegación principal">
     <button class="tab-button active" id="tab-list" title="Lista usuarios" role="tab" aria-selected="true" aria-controls="user-list">📋</button>
     <button class="tab-button" id="tab-chat" title="Chat" role="tab" aria-selected="false" aria-controls="chat-container">💬</button>
     <button class="tab-button" id="open-requests-btn" title="Solicitudes pendientes" aria-label="Solicitudes pendientes" style="display:none;">📨</button>
   </div>
-
   <div id="user-list" role="tabpanel" aria-labelledby="tab-list" tabindex="0"></div>
   <div id="chat-container" class="hidden" role="tabpanel" aria-labelledby="tab-chat" tabindex="0">
     <div id="chat-messages" aria-live="polite" aria-relevant="additions"></div>
@@ -809,6 +686,5 @@
     }
   })();
 </script>
-
 </body>
 </html>
